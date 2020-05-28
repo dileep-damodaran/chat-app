@@ -1,12 +1,11 @@
-const http = require('http');
-const express = require('express');
-const socketio = require('socket.io');
-const cors = require('cors');
-const UserService = require("./services/users/user.ts");
+import 'http';
+import 'express';
+import socketio from 'socket.io';
+import 'cors';
 
-// import {
-//     UserService
-// } from "./services/users/user";
+import {
+    UserService
+} from "./services/users/user";
 const PORT = process.env.PORT || 5000;
 
 // require("dotenv").config();
