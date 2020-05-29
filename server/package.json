@@ -2,9 +2,13 @@
     "name": "chat-application-core",
     "version": "1.0.0",
     "description": "",
-    "main": "index.js",
-    "type": "module",
+    "main": "./lib/cjs/index.js",
+    "module": "./lib/esm/index.js",
+    "files": [
+        "lib/"
+    ],
     "scripts": {
+        "tsc": "tsc -p tsconfig-cjs.json",
         "start": "nodemon index.js",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
@@ -12,7 +16,9 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
+        "@types/mongoose": "^5.7.21",
         "cors": "^2.8.5",
+        "dotenv": "^8.2.0",
         "express": "^4.17.1",
         "mongoose": "^5.9.16",
         "nodemon": "^2.0.4",
