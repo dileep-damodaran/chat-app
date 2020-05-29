@@ -9,6 +9,7 @@
     ],
     "scripts": {
         "tsc": "tsc -p tsconfig-cjs.json",
+        "rtsc": "npm run tsc",
         "start": "nodemon index.js",
         "test": "echo \"Error: no test specified\" && exit 1"
     },

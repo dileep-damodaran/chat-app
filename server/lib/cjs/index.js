@@ -27,25 +27,25 @@ const db_js_1 = require("./src/data/db.js");
 db_js_1.Db.connect();
 io.on('connection', (socket) => {
     socket.on('join', (onboard_data, callback) => __awaiter(void 0, void 0, void 0, function* () {
-        const un = onboard_data.un ? onboard_data.un.toLowerCase() : "";
-        const rn = onboard_data.rn ? onboard_data.rn.toLowerCase() : "";
         try {
+            const un = onboard_data.un ? onboard_data.un.toLowerCase() : "";
+            const rn = onboard_data.rn ? onboard_data.rn.toLowerCase() : "";
             let room = yield roomDocumentSchema_js_1.Room.findOne({ name: rn });
             let user = yield userDocumentSchema_js_1.User.findOne({ user_name: un });
+            user = yield user_js_1.UserService.addUser(socket.id, un);
             if (!room) {
                 room = yield room_js_1.RoomService.createRoom(rn);
+                const message = new messageDocumentSchema_js_1.Message();
+                message.room_id = room.id;
+                message.user_id = 'admin';
+                message.user_name = 'admin';
+                message.message = `${user.user_name} created the room`;
+                yield message.save();
             }
-            user = yield user_js_1.UserService.addUser(socket.id, un);
             const inUser = { user_name: user.user_name, socket_id: user.socket_id, activity_log: [{ joined_at: new Date(), left_at: null }] };
             room.users = (room.users || []).concat([inUser]);
             room.markModified("users");
             yield room.save();
-            const message = new messageDocumentSchema_js_1.Message();
-            message.room_id = room.id;
-            message.user_id = 'admin';
-            message.user_name = 'admin';
-            message.message = `${user.user_name} has joined`;
-            yield message.save();
             const allMessages = yield messageDocumentSchema_js_1.Message.find({ room_id: room.id }).sort({ created_at: 1.0 });
             const oldThreads = allMessages.map((thread) => {
                 return {
@@ -54,35 +54,61 @@ io.on('connection', (socket) => {
                 };
             });
             socket.emit('admin-message', oldThreads);
-            socket.broadcast.to(room.name).emit('admin-message', {
+            socket.broadcast.to(room.id).emit('admin-message', {
                 user: 'admin',
                 text: `${user.user_name} has joined`
             });
-            socket.join(room.name);
+            socket.join(room.id);
             callback();
         }
         catch (err) {
+            console.log('*****************Error in join*********************');
             console.log(err);
         }
     }));
     socket.on('send-message', (socket_id, text, callback) => __awaiter(void 0, void 0, void 0, function* () {
-        const user = yield user_js_1.UserService.getUser(socket_id);
-        const room = yield room_js_1.RoomService.getRoom(socket_id);
-        const message = new messageDocumentSchema_js_1.Message();
-        message.room_id = room.id;
-        message.user_id = user.id;
-        message.user_name = user.user_name;
-        message.message = text;
-        yield message.save();
-        io.to(room.name).emit('admin-message', {
-            user: user.user_name,
-            text: text
-        });
-        callback();
+        try {
+            const user = yield user_js_1.UserService.getUser(socket_id);
+            const room = yield room_js_1.RoomService.getRoom(socket_id);
+            const message = new messageDocumentSchema_js_1.Message();
+            message.room_id = room.id;
+            message.user_id = user.id;
+            message.user_name = user.user_name;
+            message.message = text;
+            yield message.save();
+            io.to(room.id).emit('admin-message', {
+                user: user.user_name,
+                text: text
+            });
+            callback();
+        }
+        catch (err) {
+            console.log('*****************Error in sending message*********************');
+            console.log(err);
+        }
     }));
-    socket.on('disconnect', (obj) => {
-        console.log(`${obj.name} had left the room ${obj.room}!!`);
-    });
+    socket.on('disconnect', (obj) => __awaiter(void 0, void 0, void 0, function* () {
+        try {
+            const room = yield room_js_1.RoomService.getRoom(socket.id);
+            const user = yield user_js_1.UserService.getUser(socket.id);
+            if (room && user) {
+                socket.broadcast.to(room.id).emit('admin-message', {
+                    user: 'admin',
+                    text: `${user.user_name} left the room`
+                });
+                const message = new messageDocumentSchema_js_1.Message();
+                message.room_id = room.id;
+                message.user_id = 'admin';
+                message.user_name = 'admin';
+                message.message = `${user.user_name} left the room`;
+                yield message.save();
+            }
+        }
+        catch (err) {
+            console.log('*****************Error while disconnecting*********************');
+            console.log(err);
+        }
+    }));
 });
 server.listen(PORT, () => {
     console.log(`Server has started on port ${PORT}`);
